@@ -33,7 +33,7 @@ class AvailabilityResponse(BaseModel):
 
 class ReservationRequest(BaseModel):
     time: str
-    party_size: int
+    party_size: str
     email: str
 
 
@@ -59,15 +59,16 @@ def get_availability(time: str):
 
 @app.post("/reserve")
 def reserve_table(request: ReservationRequest):
-    normalized_time = normalize_time(request.time)
-
-    if request.party_size > MAX_PARTY_SIZE:
+    try:
+        party_size = int(party_size)
+    except ValueError:
         raise HTTPException(
             status_code=400,
-            detail="Party size exceeds maximum. Call transfer required."
+            detail="Invalid party size."
         )
 
-    if request.party_size <= 0:
+
+    if party_size <= 0:
         raise HTTPException(
             status_code=400,
             detail="Invalid party size."
@@ -76,18 +77,18 @@ def reserve_table(request: ReservationRequest):
     reserved = reservations.get(normalized_time, 0)
     remaining = TOTAL_SEATS - reserved
 
-    if request.party_size > remaining:
+    if party_size > remaining:
         raise HTTPException(
             status_code=400,
             detail="Not enough seats available for this time."
         )
 
-    reservations[normalized_time] = reserved + request.party_size
+    reservations[normalized_time] = reserved + party_size
 
     return {
         "message": "Reservation confirmed",
         "time": normalized_time,
-        "party_size": request.party_size,
+        "party_size": party_size,
         "remaining_seats": TOTAL_SEATS - reservations[normalized_time]
     }
 
