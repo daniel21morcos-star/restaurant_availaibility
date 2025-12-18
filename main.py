@@ -54,12 +54,17 @@ def create_cal_booking(time: str, party_size: int, email: str):
     }
 
     payload = {
-        "start": time,
-        "responses": {
-            "email": email,
-            "partysize": party_size
+    "start": time,
+    "responses": {
+        "email": {
+            "value": email
+        },
+        "partysize": {
+            "value": int(party_size)
         }
     }
+}
+
 
     response = requests.post(
         f"{CAL_BASE_URL}/bookings",
