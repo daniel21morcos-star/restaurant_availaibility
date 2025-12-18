@@ -6,7 +6,8 @@ import os
 
 app = FastAPI()
 
-CAL_API_KEY = os.getenv("cal_live_652fd485631163ae724f1621c62f2335")
+git init
+ = os.getenv("cal_live_652fd485631163ae724f1621c62f2335")
 
 TOTAL_CAPACITY = 76
 MAX_BOOKABLE = 72
