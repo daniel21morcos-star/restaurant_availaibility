@@ -12,20 +12,17 @@ MAX_PARTY_SIZE = 10
 # ---- IN-MEMORY STORAGE ----
 reservations: Dict[str, int] = {}
 
-
-# ---- HELPERS ----
+from dateutil import parser
 def normalize_time(raw_time: str) -> str:
-    """
-    Convert time input into YYYY-MM-DD HH:MM (24h)
-    """
     try:
-        dt = datetime.strptime(raw_time.strip(), "%Y-%m-%d %H:%M")
+        dt = parser.parse(raw_time)
         return dt.strftime("%Y-%m-%d %H:%M")
-    except ValueError:
+    except Exception:
         raise HTTPException(
             status_code=400,
-            detail="Invalid time format. Use YYYY-MM-DD HH:MM"
+            detail="Could not understand the provided time."
         )
+
 
 
 # ---- MODELS ----
