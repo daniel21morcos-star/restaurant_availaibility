@@ -8,6 +8,9 @@ import requests
 
 app = FastAPI()
 print("🚨 USING NEW BACKEND WITHOUT PARTY SIZE 🚨")
+from time import time
+
+LAST_BOOKING_TIME = {}
 
 # ==============================
 # CONFIG
@@ -154,6 +157,16 @@ def reserve(request: ReservationRequest):
             status_code=400,
             detail="Party size exceeds maximum. Call transfer required."
         )
+now = time()
+last = LAST_BOOKING_TIME.get(request.email)
+
+if last and now - last < 30:
+    raise HTTPException(
+        status_code=429,
+        detail="Please wait a moment before making another reservation."
+    )
+
+LAST_BOOKING_TIME[request.email] = now
 
     normalized_time = normalize_time(request.time)
 
