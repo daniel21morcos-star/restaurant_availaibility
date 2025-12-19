@@ -82,16 +82,17 @@ def create_cal_booking(time: str, party_size: int, email: str):
     }
 
     payload = {
-        "start": time,
-        "responses": {
-            "email": {
-                "value": email
-            },
-            "partysize": {
-                "value": int(party_size)
-            }
+    "eventTypeId": 4165145,  # ← REPLACE WITH YOUR REAL ID
+    "start": time,
+    "responses": {
+        "email": {
+            "value": email
+        },
+        "guests": {          # ← your correct identifier
+            "value": int(party_size)
         }
     }
+}
 
     # 🔍 LOG EXACT PAYLOAD
     print("==== CAL PAYLOAD SENT ====")
