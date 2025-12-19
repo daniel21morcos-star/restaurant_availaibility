@@ -7,21 +7,23 @@ import os
 import requests
 
 app = FastAPI()
+print("🚨 USING NEW BACKEND WITHOUT PARTY SIZE 🚨")
 
-# ======================================================
+# ==============================
 # CONFIG
-# ======================================================
+# ==============================
 TOTAL_SEATS = 66
 MAX_PARTY_SIZE = 10
 
 CAL_API_KEY = os.getenv("CAL_API_KEY")
 CAL_BASE_URL = "https://api.cal.com/v2"
+EVENT_TYPE_ID = int(os.getenv("CAL_EVENT_TYPE_ID", "0"))
 
 DB_PATH = "reservations.db"
 
-# ======================================================
+# ==============================
 # DATABASE
-# ======================================================
+# ==============================
 def get_db():
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row
@@ -43,9 +45,9 @@ def init_db():
 
 init_db()
 
-# ======================================================
+# ==============================
 # HELPERS
-# ======================================================
+# ==============================
 def normalize_time(raw_time: str) -> str:
     try:
         dt = parser.parse(raw_time)
@@ -66,14 +68,14 @@ def get_reserved_seats(time: str) -> int:
     conn.close()
     return reserved
 
-# ======================================================
-# CAL.COM INTEGRATION (FULLY LOGGED)
-# ======================================================
-def create_cal_booking(time: str, party_size: int, email: str):
-    if not CAL_API_KEY:
+# ==============================
+# CAL.COM (CORRECT USAGE)
+# ==============================
+def create_cal_booking(time: str, email: str):
+    if not CAL_API_KEY or EVENT_TYPE_ID == 0:
         raise HTTPException(
             status_code=500,
-            detail="Cal.com API key not configured."
+            detail="Cal.com configuration missing."
         )
 
     headers = {
@@ -82,33 +84,21 @@ def create_cal_booking(time: str, party_size: int, email: str):
     }
 
     payload = {
-    "eventTypeId": 4165145,  # ← REPLACE WITH YOUR REAL ID
-    "start": time,
-    "responses": {
-        "email": {
-            "value": email
-        },
-        "guests": {          # ← your correct identifier
-            "value": int(party_size)
+        "eventTypeId": EVENT_TYPE_ID,
+        "start": time,
+        "responses": {
+            "email": {
+                "value": email
+            }
         }
     }
-}
-
-    # 🔍 LOG EXACT PAYLOAD
-    print("==== CAL PAYLOAD SENT ====")
-    print(payload)
 
     response = requests.post(
         f"{CAL_BASE_URL}/bookings",
-        headers=headers,
         json=payload,
+        headers=headers,
         timeout=15
     )
-
-    # 🔍 LOG EXACT RESPONSE
-    print("==== CAL RESPONSE ====")
-    print(response.status_code)
-    print(response.text)
 
     if response.status_code >= 400:
         raise HTTPException(
@@ -118,21 +108,21 @@ def create_cal_booking(time: str, party_size: int, email: str):
 
     return response.json()
 
-# ======================================================
+# ==============================
 # MODELS
-# ======================================================
+# ==============================
 class AvailabilityResponse(BaseModel):
     time: str
     remaining_seats: int
 
 class ReservationRequest(BaseModel):
     time: str
-    party_size: str  # comes from Retell as string
+    party_size: str  # comes from voice as string
     email: str
 
-# ======================================================
+# ==============================
 # ROUTES
-# ======================================================
+# ==============================
 @app.get("/")
 def root():
     return {"status": "ok"}
@@ -176,18 +166,13 @@ def reserve(request: ReservationRequest):
             detail="Not enough seats available."
         )
 
-    # ==================================================
-    # CREATE CAL.COM BOOKING (FIRST)
-    # ==================================================
+    # ---- CREATE CAL BOOKING (NO PARTY SIZE) ----
     create_cal_booking(
         time=normalized_time,
-        party_size=party_size,
         email=request.email
     )
 
-    # ==================================================
-    # PERSIST LOCALLY
-    # ==================================================
+    # ---- SAVE LOCALLY ----
     conn = get_db()
     conn.execute(
         """
@@ -210,4 +195,5 @@ def reserve(request: ReservationRequest):
         "party_size": party_size,
         "remaining_seats": TOTAL_SEATS - (reserved + party_size)
     }
+
 
